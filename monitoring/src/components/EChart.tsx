@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
 
-const EChart = () => {
-  const initialData = Array.from({ length: 500 }, (_, index) => [index, 0]);
+const EChart = ({
+  title,
+  chartData,
+  points = 500,
+  chartColor = "#00ff00",
+}: {
+  title: string;
+  chartData: any;
+  points?: number;
+  chartColor?: string;
+}) => {
+  const initialData = Array.from({ length: points }, (_, index) => [index, 0]);
   const [data, setData] = useState(initialData);
   const [dataPoints, setDataPoints] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:4000");
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setDataPoints((prevPoints) => [...prevPoints, data]);
-    };
-
-    return () => socket.close();
-  }, []);
+    setDataPoints((prevPoints) => [...prevPoints, chartData]);
+  }, [chartData]);
 
   // Update chart data
-  const simulateECG = (index: number) => {
-    const newIndex = (index + 6) % 500;
+  const updateChartData = (index: number) => {
+    const newIndex = (index + 6) % points;
     const range =
       newIndex > index
         ? data.slice(index + 1, newIndex)
@@ -33,7 +36,6 @@ const EChart = () => {
     }
 
     // Create a copy of the array to avoid mutating state directly
-
     newData[index][1] = dataPoints[0];
     setData(newData);
   };
@@ -47,14 +49,20 @@ const EChart = () => {
       return newPoints;
     });
     const interval = setInterval(() => {
-      simulateECG(currentIndex);
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % 500);
+      updateChartData(currentIndex);
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % points);
     }, 100);
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, [currentIndex]);
 
   const option = {
+    title: {
+      text: title,
+      textStyle: {
+        color: chartColor, // Set the title text color here
+      },
+    },
     grid: {
       left: "30px",
       right: "30px",
@@ -80,13 +88,13 @@ const EChart = () => {
         smooth: true,
         data: data,
         showSymbol: false,
-        lineStyle: { color: "#00ff00" },
+        lineStyle: { color: chartColor },
       },
     ],
   };
 
   return (
-    <ReactECharts option={option} style={{ height: "200px", width: "100vw" }} />
+    <ReactECharts option={option} style={{ height: "200px", width: "100%" }} />
   );
 };
 
